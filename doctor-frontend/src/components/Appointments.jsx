@@ -78,11 +78,11 @@ export default function Appointments() {
 
   return (
     <div className="book" style={{ padding: 20 }}>
-      <h2>Book Appointment</h2>
+      <h2 style={{textAlign:"center"}}>Book Appointment</h2>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20,display:"flex",justifyContent:"center",alignItems:"center",gap:"10px" }}>
         <label>Doctor: </label>
-        <select value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)}>
+        <select style={{padding:"9px 22px"}} value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)}>
           <option value="">Select Doctor</option>
           {doctors.map(d => (
             <option key={d.id} value={d.id}>
@@ -92,16 +92,16 @@ export default function Appointments() {
         </select>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{marginBottom: 20,display:"flex",justifyContent:"center",alignItems:"center",gap:"10px"}}>
         <label>Date: </label>
-        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+        <input style={{padding:"9px 22px"}} type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
         <button onClick={generateSlots} style={{ marginLeft: 10 }}>
           Load Slots
         </button>
       </div>
 
       {slots.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={{marginBottom: 20,display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
           {slots.map(slot => {
             const isBooked = bookedSlots.includes(slot);
 
@@ -130,9 +130,10 @@ export default function Appointments() {
       )}
 
       {selectedSlot && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20,display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",marginTop:"20px" }}>
           <input
             placeholder="Patient name"
+            style={{padding:"9px 22px"}}
             value={patientName}
             onChange={e => setPatientName(e.target.value)}
           />

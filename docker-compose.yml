@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./doctor-app-new
+      dockerfile: Dockerfile
+    container_name: doctor-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: doctor_app
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
+    depends_on:
+      - db
+    volumes:
+      - ./doctor-app-new:/var/www/html
+
+  frontend:
+    build:
+      context: ./doctor-frontend
+      dockerfile: Dockerfile
+    container_name: doctor-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./doctor-frontend:/app
+
+  db:
+    image: postgres:15
+    container_name: doctor-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: doctor_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
