@@ -94,7 +94,13 @@ export default function Appointments() {
 
       <div style={{marginBottom: 20,display:"flex",justifyContent:"center",alignItems:"center",gap:"10px"}}>
         <label>Date: </label>
-        <input style={{padding:"9px 22px"}} type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+          <input
+            style={{ padding: "9px 22px" }}
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            min={new Date().toISOString().split("T")[0]} 
+          />
         <button onClick={generateSlots} style={{ marginLeft: 10 }}>
           Load Slots
         </button>
