@@ -32,9 +32,11 @@ class AppointmentController extends Controller
         $appointment = DB::transaction(function () use ($request, $startTime, $endTime) {
 
             $exists = Appointment::where('doctor_id', $request->doctor_id)
-                ->whereBetween('start_time', [$startTime, $endTime])
+                ->where('start_time', '<', $endTime)  // existing start < 16:30
+                ->where('end_time', '>', $startTime)  // existing end > 16:00
                 ->lockForUpdate()
                 ->exists();
+
 
             if ($exists) {
                 throw new \Exception('Slot was just booked. Please choose another time.');

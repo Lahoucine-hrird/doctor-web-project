@@ -1,187 +1,148 @@
-import { useState, useEffect } from "react";
-import { getDoctors, getDoctorAvailability } from "../api";
+import { useEffect, useState } from "react";
+import { getDoctors, bookAppointment, getBookedSlots } from "../api"; // ensure getBookedSlots exists
 
-const formatDateTime = (isoString) => {
-  const date = new Date(isoString);
-  return {
-    date: date.toISOString().split("T")[0],
-    time: date.toTimeString().slice(0, 5)
-  };
-};
-
-const today = new Date().toISOString().split("T")[0];
-
-/* Generate daily slots*/
-const generateSlots = () => {
-  const slots = [];
-  for (let h = 9; h < 17; h++) {
-    slots.push(`${String(h).padStart(2, "0")}:00`);
-    slots.push(`${String(h).padStart(2, "0")}:30`);
-  }
-  return slots;
-};
-
-export default function ShowAppointments() {
+export default function Appointments() {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [appointments, setAppointments] = useState([]);
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [patientName, setPatientName] = useState("");
   const [message, setMessage] = useState("");
-  const [showSlots, setShowSlots] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState([]);
 
-  const allSlots = generateSlots();
-
-  /*   Load doctors   */
+  // Fetch doctors
   useEffect(() => {
-    getDoctors().then(setDoctors).catch(console.error);
+    getDoctors()
+      .then(data => setDoctors(data))
+      .catch(err => console.error("Failed to fetch doctors:", err));
   }, []);
 
-  /*   Load appointments   */
-  const loadAppointments = async () => {
+  // Generate 30-min slots dynamically
+  const generateSlots = async () => {
     if (!selectedDoctor || !selectedDate) {
       alert("Select doctor and date first");
       return;
     }
 
+    const startHour = 9;
+    const endHour = 17;
+    const newSlots = [];
+
+    for (let h = startHour; h < endHour; h++) {
+      newSlots.push(`${String(h).padStart(2, "0")}:00`);
+      newSlots.push(`${String(h).padStart(2, "0")}:30`);
+    }
+
     try {
-      const data = await getDoctorAvailability(selectedDoctor, selectedDate);
-      setAppointments(data);
+      const data = await getBookedSlots(selectedDoctor, selectedDate);
+      setBookedSlots(data.booked_slots || []);
+      setSlots(newSlots);
+      setSelectedSlot("");
       setMessage("");
-    } catch {
-      setAppointments([]);
-      setMessage("No appointments found");
+    } catch (err) {
+      setMessage(err.message || "Failed to load booked slots");
     }
   };
 
-  /*   Booked slots   */
-  const bookedSlots = appointments.map(
-    (a) => formatDateTime(a.start_time).time
-  );
+  // Book an appointment
+  const handleBooking = async () => {
+    if (!selectedDoctor || !selectedDate || !selectedSlot || !patientName) {
+      return alert("Select doctor, date, slot, and enter patient name");
+    }
+
+    const start_time = `${selectedDate} ${selectedSlot}:00`;
+    const end_time = new Date(new Date(start_time).getTime() + 30 * 60000)
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
+
+    try {
+      await bookAppointment({
+        doctor_id: selectedDoctor,
+        patient_name: patientName,
+        start_time,
+      });
+
+      // Add booked slot to bookedSlots so it turns red
+      setBookedSlots([...bookedSlots, selectedSlot]);
+
+      setMessage(`✅ Appointment booked successfully for ${patientName} at ${start_time}`);
+      setSelectedSlot("");
+      setPatientName("");
+    } catch (err) {
+      console.error(err);
+      setMessage(err.message || "⚠ Slot was just booked. Please choose another.");
+    }
+  };
 
   return (
-    <div className="book" style={{ textAlign: "center", padding: 20 }}>
-      <h2>Show Appointments</h2>
+    <div className="book" style={{ padding: 20 }}>
+      <h2>Book Appointment</h2>
 
-      {/*   Filters   */}
-      <select
-        value={selectedDoctor}
-        onChange={(e) => setSelectedDoctor(e.target.value)}
-        style={{ padding: 6 }}
-      >
-        <option value="">Select Doctor</option>
-        {doctors.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
-      </select>
+      <div style={{ marginBottom: 20 }}>
+        <label>Doctor: </label>
+        <select value={selectedDoctor} onChange={e => setSelectedDoctor(e.target.value)}>
+          <option value="">Select Doctor</option>
+          {doctors.map(d => (
+            <option key={d.id} value={d.id}>
+              {d.name} ({d.specialization})
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <br /><br />
+      <div style={{ marginBottom: 20 }}>
+        <label>Date: </label>
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+        <button onClick={generateSlots} style={{ marginLeft: 10 }}>
+          Load Slots
+        </button>
+      </div>
 
-      <input
-        type="date"
-        min={today}
-        value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
-        style={{ padding: 6 }}
-      />
+      {slots.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          {slots.map(slot => {
+            const isBooked = bookedSlots.includes(slot);
 
-      <br /><br />
-
-      <button onClick={loadAppointments}>
-        Load Appointments
-      </button>
-
-      <br /><br />
-
-      {/* Checkbox Show available times  */}
-      <label>
-        <input
-          type="checkbox"
-          checked={showSlots}
-          onChange={(e) => setShowSlots(e.target.checked)}
-        />
-        {" "}Show available times
-      </label>
-
-      {/* Slots Show  times */}
-      {showSlots && (
-        <div style={{ marginTop: 20 }}>
-          <h3>Time Slots</h3>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 10,
-              maxWidth: 400,
-              margin: "auto"
-            }}
-          >
-            {allSlots.map((slot) => {
-              const isBooked = bookedSlots.includes(slot);
-
-              return (
-                <div
-                  key={slot}
-                  style={{
-                    padding: "8px",
-                    borderRadius: 6,
-                    color: "#fff",
-                    backgroundColor: isBooked ? "#e53935" : "#43a047",
-                    opacity: isBooked ? 0.6 : 1
-                  }}
-                >
-                  {slot}
-                </div>
-              );
-            })}
-          </div>
+            return (
+              <button
+                key={slot}
+                disabled={isBooked}
+                onClick={() => !isBooked && setSelectedSlot(slot)}
+                style={{
+                  padding: "5px 10px",
+                  cursor: isBooked ? "not-allowed" : "pointer",
+                  backgroundColor: isBooked
+                    ? "#ff4d4d" // booked = red
+                    : selectedSlot === slot
+                    ? "#4caf50" // selected = green
+                    : "#5c5c5cff", // available = gray
+                  opacity: isBooked ? 0.7 : 1,
+                  margin: 3
+                }}
+              >
+                {slot}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Appointments Table*/}
-      {appointments.length > 0 ? (
-        <table
-          border="1"
-          cellPadding="8"
-          style={{
-            marginTop: 30,
-            borderCollapse: "collapse",
-            marginInline: "auto"
-          }}
-        >
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Date</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {appointments.map((appt) => {
-              const start = formatDateTime(appt.start_time);
-              const end = formatDateTime(appt.end_time);
-
-              return (
-                <tr key={appt.id}>
-                  <td>{appt.patient_name}</td>
-                  <td>{start.date}</td>
-                  <td>{start.time}</td>
-                  <td>{end.time}</td>
-                  <td>{appt.status}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : (
-        <p style={{ marginTop: 20 }}>
-          {message || "No appointments for this day."}
-        </p>
+      {selectedSlot && (
+        <div style={{ marginBottom: 20 }}>
+          <input
+            placeholder="Patient name"
+            value={patientName}
+            onChange={e => setPatientName(e.target.value)}
+          />
+          <button onClick={handleBooking} style={{ marginLeft: 10 }}>
+            Book
+          </button>
+        </div>
       )}
+
+      {message && <p style={{ marginTop: 10 }}>{message}</p>}
     </div>
   );
 }

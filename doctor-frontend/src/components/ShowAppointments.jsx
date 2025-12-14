@@ -3,18 +3,23 @@ import { getDoctors, getDoctorAvailability } from "../api";
 
 const formatDateTime = (isoString) => {
   const date = new Date(isoString);
-
-  const formattedDate = date.toISOString().split("T")[0]; 
-  const formattedTime = date.toTimeString().slice(0, 5);  
-
   return {
-    date: formattedDate,
-    time: formattedTime
+    date: date.toISOString().split("T")[0],
+    time: date.toTimeString().slice(0, 5)
   };
 };
 
-/* ---------- Helper to get today date (disable past) ---------- */
 const today = new Date().toISOString().split("T")[0];
+
+/* Generate daily slots*/
+const generateSlots = () => {
+  const slots = [];
+  for (let h = 9; h < 17; h++) {
+    slots.push(`${String(h).padStart(2, "0")}:00`);
+    slots.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return slots;
+};
 
 export default function ShowAppointments() {
   const [doctors, setDoctors] = useState([]);
@@ -22,15 +27,16 @@ export default function ShowAppointments() {
   const [selectedDate, setSelectedDate] = useState("");
   const [appointments, setAppointments] = useState([]);
   const [message, setMessage] = useState("");
+  const [showSlots, setShowSlots] = useState(false);
 
-  /* ---------- Load doctors ---------- */
+  const allSlots = generateSlots();
+
+  /*   Load doctors   */
   useEffect(() => {
-    getDoctors()
-      .then(setDoctors)
-      .catch(console.error);
+    getDoctors().then(setDoctors).catch(console.error);
   }, []);
 
-  /* ---------- Load appointments ---------- */
+  /*   Load appointments   */
   const loadAppointments = async () => {
     if (!selectedDoctor || !selectedDate) {
       alert("Select doctor and date first");
@@ -41,75 +47,116 @@ export default function ShowAppointments() {
       const data = await getDoctorAvailability(selectedDoctor, selectedDate);
       setAppointments(data);
       setMessage("");
-    } catch (err) {
+    } catch {
       setAppointments([]);
       setMessage("No appointments found");
     }
   };
 
+  /*   Booked slots   */
+  const bookedSlots = appointments.map(
+    (a) => formatDateTime(a.start_time).time
+  );
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: 20
-      }}
-    >
-      {/* ---------- Filters ---------- */}
-      <div className="book" style={{ padding: 20 }}>
-        <h2>Show Appointments</h2>
+    <div className="book" style={{ textAlign: "center", padding: 20 }}>
+      <h2>Show Appointments</h2>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            alignItems: "center"
-          }}
-        >
-          <label>Doctor</label>
-          <select
-            value={selectedDoctor}
-            style={{ padding: "6px 22px" }}
-            onChange={(e) => setSelectedDoctor(e.target.value)}
+      {/*   Filters   */}
+      <select
+        value={selectedDoctor}
+        onChange={(e) => setSelectedDoctor(e.target.value)}
+        style={{ padding: 6 }}
+      >
+        <option value="">Select Doctor</option>
+        {doctors.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+
+      <br /><br />
+
+      <input
+        type="date"
+        min={today}
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+        style={{ padding: 6 }}
+      />
+
+      <br /><br />
+
+      <button onClick={loadAppointments}>
+        Load Appointments
+      </button>
+
+      <br /><br />
+
+      {/* Checkbox Show available times  */}
+      <label>
+        <input
+          type="checkbox"
+          checked={showSlots}
+          onChange={(e) => setShowSlots(e.target.checked)}
+        />
+        {" "}Show available times
+      </label>
+
+      {/* Slots Show  times */}
+      {showSlots && (
+        <div style={{ marginTop: 20 }}>
+          <h3>Time Slots</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 10,
+              maxWidth: 400,
+              margin: "auto"
+            }}
           >
-            <option value="">Select Doctor</option>
-            {doctors.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.specialization})
-              </option>
-            ))}
-          </select>
+            {allSlots.map((slot) => {
+              const isBooked = bookedSlots.includes(slot);
 
-          <label>Date</label>
-          <input
-            type="date"
-            style={{ padding: "6px 22px" }}
-            value={selectedDate}
-            min={today}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-
-          <button onClick={loadAppointments}>
-            Load Appointments
-          </button>
+              return (
+                <div
+                  key={slot}
+                  style={{
+                    padding: "8px",
+                    borderRadius: 6,
+                    color: "#fff",
+                    backgroundColor: isBooked ? "#e53935" : "#43a047",
+                    opacity: isBooked ? 0.6 : 1
+                  }}
+                >
+                  {slot}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ---------- Table ---------- */}
+      {/* Appointments Table*/}
       {appointments.length > 0 ? (
         <table
           border="1"
           cellPadding="8"
-          style={{ marginTop: 20, borderCollapse: "collapse" }}
+          style={{
+            marginTop: 30,
+            borderCollapse: "collapse",
+            marginInline: "auto"
+          }}
         >
           <thead>
             <tr>
-              <th>Patient Name</th>
+              <th>Patient</th>
               <th>Date</th>
-              <th>Start Time</th>
-              <th>End Time</th>
+              <th>Start</th>
+              <th>End</th>
               <th>Status</th>
             </tr>
           </thead>
