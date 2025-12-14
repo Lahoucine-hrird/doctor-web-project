@@ -72,6 +72,9 @@ php artisan key:generate
 # Run database migrations to create tables
 php artisan migrate
 
+#test Add Doctors
+php artisan tinker --execute="App\Models\Doctor::create(['name'=>'Dr. John Doe','specialization'=>'Cardiology']); App\Models\Doctor::create(['name'=>'Dr. Jane Doe','specialization'=>'Dermatology']);"
+
 
 3. Frontend Setup
 
