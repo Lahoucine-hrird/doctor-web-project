@@ -44,5 +44,45 @@ It consists of:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/doctor-web-project.git
+git clone https://github.com/Lahoucine-hrird/doctor-web-project.git
 cd doctor-web-project
+
+
+### 2. Backend Setup
+
+cd doctor-app-new
+
+# Copy environment file
+cp .env.example .env
+
+# Update database credentials in .env
+# DB_CONNECTION=pgsql
+# DB_HOST=127.0.0.1
+# DB_PORT=5432
+# DB_DATABASE=doctor_app
+# DB_USERNAME=postgres
+# DB_PASSWORD=root
+
+# Install PHP dependencies
+composer install
+
+# Generate application key
+php artisan key:generate
+
+# Run database migrations to create tables
+php artisan migrate
+
+
+3. Frontend Setup
+
+
+cd ../doctor-frontend
+
+# Install dependencies
+npm install
+
+# Optional: build frontend for production
+npm run build
+
+
+
